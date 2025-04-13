@@ -1,6 +1,19 @@
-# uci-test-suite
+# UCI Test Suite
 
 A Python-based set of tests for UCI server/chess engine implementations (such as Stockfish).
+
+## Overview
+
+The UCI Test Suite is designed to test the correctness of a chess engine's implementation of the Universal Chess Interface (UCI) protocol, not its playing strength. This makes it useful for testing new chess engines or modifications to existing ones.
+
+## Features
+
+- Tests basic UCI protocol commands and responses
+- Checks position handling and move calculation
+- Validates different time control parameters
+- Supports various UCI options like Ponder and MultiPV
+- Tests run in order of increasing complexity
+- Testing continues even if individual tests fail
 
 ## Dependencies
 
@@ -16,6 +29,7 @@ On macOS, you can use `brew install stockfish`.
 
 You need to find out the path to your UCI-capable engine binary; for further example configuration, the path is e.g. `/usr/local/bin/stockfish` (which is default for Stockfish installed on macOS using Brew).
 
+Run with `--help` to see all available command-line options.
 
 ### Uvx (recommended)
 
@@ -25,7 +39,7 @@ This is the preferred way to run the `uci-test-suite`.
 Run the test suite using the following command line:
 
 ```sh
-uvx --from=git+https://github.com/AnglerfishChess/uci-test-suite /usr/local/bin/stockfish
+uvx --from=git+https://github.com/AnglerfishChess/uci-test-suite uci-test-suite /usr/local/bin/stockfish
 ```
 
 ### Uv
