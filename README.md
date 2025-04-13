@@ -39,7 +39,7 @@ This is the preferred way to run the `uci-test-suite`.
 Run the test suite using the following command line:
 
 ```sh
-uvx --from=git+https://github.com/AnglerfishChess/uci-test-suite uci-test-suite /usr/local/bin/stockfish
+uvx uci-test-suite@latest /usr/local/bin/stockfish
 ```
 
 ### Uv
@@ -73,9 +73,19 @@ source .venv/bin/activate  # On Unix/macOS
 # or, with development dependencies
 uv pip install -e ".[dev]"
 
+# Resync the packages:
+uv sync --extra=dev
+
 # Run tests
 pytest
 
 # Check code style
 ruff check
+```
+
+### Release process
+
+```bash
+uv build
+uv-publish
 ```

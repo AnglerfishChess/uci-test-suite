@@ -1,12 +1,26 @@
 [project]
 name = "uci-test-suite"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python-based set of tests for UCI server/chess engine implementations"
 authors = [
     {name = "Alex Myodov", email = "amyodov@gmail.com"}
 ]
 license = {text = "MIT License"}
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
+keywords = ["chess", "UCI", "chess engine", "testing", "test suite", "uci protocol", "uci chess"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Games/Entertainment :: Board Games",
+    "Topic :: Software Development :: Testing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent"
+]
 requires-python = ">=3.10"
 dependencies = [
     "chess>=1.11.2,<2.0.0",
@@ -21,6 +35,7 @@ build-backend = "setuptools.build_meta"
 dev = [
     "pytest>=8.3.0",
     "ruff>=0.11.4",
+    "uv-publish>=1.2",
 ]
 
 [project.scripts]
