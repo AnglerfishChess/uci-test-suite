@@ -1,0 +1,35 @@
+[project]
+name = "uci-test-suite"
+version = "0.1.0"
+description = "A Python-based set of tests for UCI server/chess engine implementations"
+authors = [
+    {name = "Alex Myodov", email = "amyodov@gmail.com"}
+]
+license = {text = "MIT License"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "chess>=1.11.2,<2.0.0",
+    "click>=8.1.8,<9.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "ruff>=0.11.4",
+]
+
+[project.scripts]
+uci-test-suite = "uci_test_suite.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["uci_test_suite"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
