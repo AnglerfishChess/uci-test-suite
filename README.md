@@ -8,16 +8,17 @@ The UCI Test Suite is designed to test the correctness of a chess engine's imple
 
 ## Features
 
-- Tests basic UCI protocol commands and responses
+- Tests basic UCI protocol commands and responses, on the wire: the suite spawns the engine and asserts on the exact protocol text
 - Checks position handling and move calculation
 - Validates different time control parameters
-- Supports various UCI options like Ponder and MultiPV
+- Supports various UCI options like Ponder and MultiPV; a test is skipped, not failed, when the engine does not advertise the feature
+- Runs a separate group of tests through `python-chess`, checking that a mainstream UCI client can drive the engine
 - Tests run in order of increasing complexity
 - Testing continues even if individual tests fail
 
 ## Dependencies
 
-You need to have Python 3.10 or newer, and also `uv`/`uvx` installed.
+You need to have Python 3.13 or newer, and also `uv`/`uvx` installed.
 
 ## Usage
 
@@ -60,27 +61,16 @@ git clone https://github.com/AnglerfishChess/uci-test-suite.git
 
 cd uci-test-suite
 
-# Create a virtual environment
-uv venv --python python3.10
+# Create the virtual environment and install the package and its development dependencies
+uv sync
 
-# Activate the virtual environment
-source .venv/bin/activate  # On Unix/macOS
-# or
-.venv\Scripts\activate     # On Windows
+# Run the tests; those needing a real engine are skipped unless `stockfish` is on PATH
+uv run pytest
 
-# Install the package in development mode
-#    uv pip install -e .
-# or, with development dependencies
-uv pip install -e ".[dev]"
-
-# Resync the packages:
-uv sync --extra=dev
-
-# Run tests
-pytest
-
-# Check code style
-ruff check
+# Check code style and types
+uvx ruff check .
+uvx ruff format --check .
+uvx pyrefly check
 ```
 
 ### Release process
