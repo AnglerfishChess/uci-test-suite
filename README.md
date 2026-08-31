@@ -8,13 +8,28 @@ The UCI Test Suite is designed to test the correctness of a chess engine's imple
 
 ## Features
 
-- Tests basic UCI protocol commands and responses, on the wire: the suite spawns the engine and asserts on the exact protocol text
-- Checks position handling and move calculation
-- Validates different time control parameters
-- Supports various UCI options like Ponder and MultiPV; a test is skipped, not failed, when the engine does not advertise the feature
-- Runs a separate group of tests through `python-chess`, checking that a mainstream UCI client can drive the engine
-- Tests run in order of increasing complexity
-- Testing continues even if individual tests fail
+- Checks the protocol on the wire: the suite spawns the engine and asserts on the exact protocol text
+- Groups the checks by protocol layer, and runs them lowest layer first, each layer on a fresh engine process
+- Skips, rather than fails, a feature the engine does not advertise
+- Drives the engine through `python-chess` as well, as a mainstream UCI client would
+- Testing continues even if individual checks fail
+
+## Levels
+
+| Level | Name | What it covers |
+| ----- | ---- | -------------- |
+| L0 | Process | Starts, ignores junk before and after the handshake, keeps stdout well-formed, quits cleanly |
+| L1 | Handshake | `uci` → `id name`/`id author`/`option`/`uciok`; `isready` → `readyok` |
+| L2 | Play | `position startpos`/`position fen`, `go movetime`, clock controls, `stop`, and a legal `bestmove` every time |
+| L3 | Session | `ucinewgame`, `setoption` on every declared option, `debug`, the `go` limits, `isready` while searching, the `info` stream |
+| L4 | Optional | Ponder, MultiPV, `searchmoves`, `UCI_Chess960`, `UCI_AnalyseMode`, `register`/`copyprotection` — each skipped when not offered |
+| L5 | Robustness | Malformed commands, impossible positions, illegal moves, junk bursts, `quit` mid-search: no crash, no hang, `isready` still answered |
+| L6 | Acceptance | `python-chess` drives the engine end to end |
+
+**L0–L2 together are the minimum UCI engine.** An engine that passes them can be played; the levels above add the
+conveniences a GUI expects.
+
+`uci-test-suite --list` prints every check with its purpose.
 
 ## Dependencies
 
@@ -50,6 +65,46 @@ Use it if you have the repository cloned locally and run from it:
 ```sh
 uv run uci-test-suite /usr/local/bin/stockfish
 ```
+
+### The engine is a command line
+
+The engine argument is a whole command line, not only a path, so an engine that needs an interpreter or
+arguments of its own works too:
+
+```sh
+uci-test-suite python my_engine.py
+uci-test-suite -- java -jar engine.jar --threads 1
+```
+
+Put `--` before the engine when its own options would otherwise be read as the suite's, and put the suite's own
+options before it.
+
+### Choosing levels
+
+```sh
+uci-test-suite -l 2 ./engine          # one level
+uci-test-suite -l 0-2 ./engine        # an inclusive range: the minimum UCI engine
+uci-test-suite -l 0-2,5 ./engine      # ranges and levels combined
+uci-test-suite --list                 # every check, grouped by level
+```
+
+Without `--level`, every level runs. The run ends with a per-level summary, such as
+`L0-L2: pass · L3: 7/9 · L4: skipped (none declared) · L5: 2 failed · L6: pass`, and exits non-zero if any
+selected check failed.
+
+### Machine-readable output
+
+`--json` writes the full result list — level, name, status, message, details and timings — to standard output,
+and everything human-readable to standard error:
+
+```sh
+uci-test-suite --json ./engine > results.json
+```
+
+### Timeouts
+
+Every check carries its own time budget; `--timeout` scales them all. Raise it for an engine that thinks slowly
+(`--timeout 30`), lower it to fail a wedged engine faster.
 
 ## Development
 
