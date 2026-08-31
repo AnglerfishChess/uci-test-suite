@@ -2,7 +2,8 @@
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "uci-test-suite",
   "description": "UCI conformance test suite for chess engines: checks that a program correctly speaks the UCI protocol, from process behaviour to optional features, never its playing strength",
-  "url": "https://context7.com/AnglerfishChess/uci-test-suite",
+  "url": "https://context7.com/anglerfishchess/uci-test-suite",
+  "public_key": "pk_oqKTKO3hmjBG756m5kers",
   "folders": [],
   "excludeFolders": [
     "uci_test_suite",
