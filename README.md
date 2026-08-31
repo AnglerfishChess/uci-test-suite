@@ -79,3 +79,7 @@ uvx pyrefly check
 uv build
 uv-publish
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
