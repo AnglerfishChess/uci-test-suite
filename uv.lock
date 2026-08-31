@@ -129,7 +129,6 @@ dev = [
     { name = "pyrefly" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "uv-publish" },
 ]
 
 [package.metadata]
@@ -143,14 +142,4 @@ dev = [
     { name = "pyrefly", specifier = ">=0.16.0" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "ruff", specifier = ">=0.11.4" },
-    { name = "uv-publish", specifier = ">=1.2" },
-]
-
-[[package]]
-name = "uv-publish"
-version = "1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/01/84/6fabbe0bd158a76f83870f7006b917996e2002f7dd24d50eb86846854192/uv_publish-1.2.tar.gz", hash = "sha256:84a104b7698a0ea4eecdd0b243113daf2a4b6a206b58ad1b430409dd6bcbcbeb", size = 4257 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/33/e5cf9be147012f66c5461e2ecde429117c55bcd5cbcffcf3bf22a8bafe35/uv_publish-1.2-py3-none-any.whl", hash = "sha256:50300c478293197af8ce56f9f7fec23d85278805344aa756e30c6436c77b05a3", size = 3972 },
 ]

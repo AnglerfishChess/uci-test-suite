@@ -75,9 +75,16 @@ uvx pyrefly check
 
 ### Release process
 
+Releases are cut by tagging a commit and publishing a GitHub release from it; that publish event
+triggers `.github/workflows/publish.yml`, which builds and uploads the package to PyPI.
+
+Contributors run the same checks CI runs, locally, before opening a PR:
+
 ```bash
-uv build
-uv-publish
+uv run pytest
+uvx ruff check .
+uvx ruff format --check .
+uvx pyrefly check
 ```
 
 ## License

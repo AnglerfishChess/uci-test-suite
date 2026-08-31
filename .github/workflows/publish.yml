@@ -1,0 +1,31 @@
+# Runs when a GitHub release is published. Uploads via PyPI trusted publishing
+# (OIDC) for AnglerfishChess/uci-test-suite, environment `pypi`; no token.
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - run: uv build
+
+      - name: Verify built version matches release tag
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          got="$(basename dist/*.tar.gz .tar.gz | sed -E 's/^uci_test_suite-//')"
+          if [ "$got" != "$want" ]; then
+            echo "built version $got does not match release tag $want" >&2
+            exit 1
+          fi
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
