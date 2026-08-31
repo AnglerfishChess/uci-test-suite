@@ -1,7 +1,8 @@
 """UCI-level views of a running engine, handed to the checks."""
 
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -24,6 +25,7 @@ from uci_test_suite.transport import EngineTimeout, Line, RawUciClient
 __all__ = [
     "AcceptanceSession",
     "Handshake",
+    "ProcessSession",
     "RawSession",
     "SearchResult",
 ]
@@ -31,10 +33,13 @@ __all__ = [
 #: How long the engine may stay silent after a "bestmove" before the search is considered over.
 SETTLE_TIME: Final[float] = 0.2
 
+#: How long the engine may keep talking after "uciok" before the handshake is considered over.
+HANDSHAKE_TAIL: Final[float] = 0.15
+
 
 @dataclass(frozen=True, slots=True)
 class Handshake:
-    """What the engine said between ``uci`` and ``uciok``."""
+    """What the engine said in answer to ``uci``, up to ``uciok`` and just after it."""
 
     id: dict[str, str]
     options: tuple[OptionSpec, ...]
@@ -105,6 +110,7 @@ class RawSession:
         self.client.send("uci")
         lines = self.client.expect("uciok", timeout=self.timeout)
         elapsed = time.monotonic() - started
+        lines += self.client.drain(quiet_for=HANDSHAKE_TAIL, timeout=1.0)
 
         identifiers: dict[str, str] = {}
         options: list[OptionSpec] = []
@@ -148,6 +154,16 @@ class RawSession:
         self.client.send("isready")
         self.client.expect("readyok", timeout=self.timeout if timeout is None else timeout)
         return time.monotonic() - started
+
+    def send(self, command: str) -> None:
+        """Write one command line to the engine, without waiting for anything."""
+        self.client.send(command)
+
+    def new_game(self) -> None:
+        """Send ``ucinewgame`` and wait for the engine to digest it."""
+        self._require_handshake()
+        self.client.send("ucinewgame")
+        self.sync()
 
     def set_option(self, name: str, value: str | None = None) -> None:
         """Send ``setoption`` and wait for the engine to digest it."""
@@ -241,6 +257,30 @@ class RawSession:
             self.sync(timeout=min(self.timeout, 5.0))
         except EngineTimeout:
             pass
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessSession:
+    """The engine as a command line, spawned afresh for each use."""
+
+    command: tuple[str, ...]
+    timeout: float = 10.0
+
+    @contextmanager
+    def client(self) -> Iterator[RawUciClient]:
+        """A started transport client on a new engine process, quit on exit."""
+        client = RawUciClient(self.command, default_timeout=self.timeout)
+        client.start()
+        try:
+            yield client
+        finally:
+            client.quit(timeout=self.timeout)
+
+    @contextmanager
+    def session(self) -> Iterator["RawSession"]:
+        """A session on a new engine process, quit on exit."""
+        with self.client() as client:
+            yield RawSession(client, timeout=self.timeout)
 
 
 @dataclass(slots=True)

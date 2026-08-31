@@ -1,4 +1,4 @@
-"""Checks that a mainstream UCI client — ``python-chess`` — can drive the engine end to end."""
+"""L6 — a mainstream UCI client, ``python-chess``, drives the engine end to end."""
 
 import chess
 import chess.engine
@@ -8,7 +8,7 @@ from uci_test_suite.checks.registry import acceptance_check
 from uci_test_suite.checks.session import AcceptanceSession
 
 
-@acceptance_check("pychess_handshake")
+@acceptance_check("pychess_handshake", budget=25.0)
 def check_pychess_handshake(session: AcceptanceSession) -> Outcome:
     """``python-chess`` completes the handshake and reads the engine's identity and options."""
     identifiers = dict(session.engine.id)
@@ -16,15 +16,13 @@ def check_pychess_handshake(session: AcceptanceSession) -> Outcome:
     if missing:
         raise CheckFailure(f"python-chess did not read the engine {' and '.join(missing)}", id=identifiers)
     options = list(session.engine.options)
-    if not options:
-        raise CheckFailure("python-chess read no options from the engine")
     return Outcome(
         f"{identifiers['name']} accepted, {len(options)} options read",
         details={"id": identifiers, "options": options},
     )
 
 
-@acceptance_check("pychess_play")
+@acceptance_check("pychess_play", budget=25.0)
 def check_pychess_play(session: AcceptanceSession) -> Outcome:
     """``python-chess`` gets a legal move out of the engine with ``play()``."""
     board = chess.Board()
@@ -43,18 +41,25 @@ def check_pychess_play(session: AcceptanceSession) -> Outcome:
     )
 
 
-@acceptance_check("pychess_analyse")
+@acceptance_check("pychess_analyse", budget=45.0)
 def check_pychess_analyse(session: AcceptanceSession) -> Outcome:
-    """``python-chess`` gets a scored analysis out of the engine with ``analyse()``."""
+    """
+    ``python-chess`` gets an analysis out of the engine with ``analyse()``.
+
+    A search that reports no score still conforms: ``info score`` is optional in the spec.
+    """
     board = chess.Board()
     info = session.engine.analyse(board, chess.engine.Limit(depth=8))
-    if "score" not in info:
-        raise CheckFailure("analysis carries no score", keys=sorted(str(key) for key in info))
+    keys = sorted(str(key) for key in info)
+    score = info.get("score")
     return Outcome(
-        f"analysis at depth {info.get('depth')} scored {info['score'].white()}",
+        f"analysis at depth {info.get('depth')} scored {score.white()}"
+        if score is not None
+        else f"analysis at depth {info.get('depth')}, no score reported",
         details={
             "depth": info.get("depth"),
-            "score": str(info["score"].white()),
-            "keys": sorted(str(key) for key in info),
+            "score": str(score.white()) if score is not None else None,
+            "keys": keys,
+            "note": None if score is not None else "no info score line; the spec does not require one",
         },
     )

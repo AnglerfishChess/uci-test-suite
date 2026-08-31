@@ -1,14 +1,64 @@
 """Assertions shared by the checks; each one either passes quietly or raises :class:`CheckFailure`."""
 
-from typing import Any
+from collections.abc import Callable, Sequence
+from typing import Any, Final
 
 import chess
 
 from uci_test_suite.checks.base import CheckFailure
-from uci_test_suite.checks.session import SearchResult
-from uci_test_suite.protocol import BestMove, is_lan_move
+from uci_test_suite.checks.session import RawSession, SearchResult
+from uci_test_suite.protocol import (
+    BestMove,
+    LineKind,
+    ProtocolError,
+    classify,
+    is_lan_move,
+    parse_bestmove,
+    parse_id,
+    parse_info,
+    parse_option,
+)
+from uci_test_suite.transport import EngineDied, EngineTimeout
 
-__all__ = ["move_details", "verify_move", "verify_single_bestmove"]
+__all__ = [
+    "malformed_lines",
+    "move_details",
+    "verify_move",
+    "verify_responsive",
+    "verify_single_bestmove",
+]
+
+
+def verify_responsive(session: RawSession, after: str, timeout: float | None = None) -> float:
+    """Seconds the engine took to answer ``isready``; fails when it dies or stays silent."""
+    try:
+        return session.sync(timeout=timeout)
+    except EngineTimeout:
+        raise CheckFailure(f"engine stopped answering isready after {after}", after=after) from None
+    except EngineDied as died:
+        raise CheckFailure(f"engine died after {after}: {died}", after=after, returncode=died.returncode) from None
+
+
+_PARSERS: Final[dict[LineKind, Callable[[str], object]]] = {
+    LineKind.ID: parse_id,
+    LineKind.OPTION: parse_option,
+    LineKind.INFO: parse_info,
+    LineKind.BESTMOVE: parse_bestmove,
+}
+
+
+def malformed_lines(lines: Sequence[str]) -> list[str]:
+    """The given engine lines that use a UCI keyword but break its grammar, each with the reason."""
+    broken: list[str] = []
+    for text in lines:
+        parser = _PARSERS.get(classify(text))
+        if parser is None:
+            continue
+        try:
+            parser(text)
+        except ProtocolError as error:
+            broken.append(f"{text} -- {error}")
+    return broken
 
 
 def verify_move(board: chess.Board, best: BestMove, where: str) -> chess.Move:

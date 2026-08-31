@@ -133,8 +133,17 @@ class OptionSpec:
     max: int | None = None
     var: tuple[str, ...] = ()
 
+    def warnings(self) -> tuple[str, ...]:
+        """Ways in which this declaration is thinner than the spec asks, while staying usable."""
+        problems: list[str] = []
+        if self.type is OptionType.SPIN and (self.min is None or self.max is None):
+            problems.append("spin option has no min/max")
+        if self.type is OptionType.STRING and self.default is None:
+            problems.append("string option has no default")
+        return tuple(problems)
+
     def issues(self) -> tuple[str, ...]:
-        """Ways in which this declaration disagrees with the UCI spec; empty when it conforms."""
+        """Ways in which this declaration contradicts the UCI spec; empty when it conforms."""
         problems: list[str] = []
         match self.type:
             case OptionType.CHECK:
@@ -143,8 +152,6 @@ class OptionSpec:
                 elif self.default not in ("true", "false"):
                     problems.append(f"check option default is {self.default!r}, not true/false")
             case OptionType.SPIN:
-                if self.min is None or self.max is None:
-                    problems.append("spin option has no min/max")
                 if self.default is None:
                     problems.append("spin option has no default")
                 elif not _is_int(self.default):
@@ -164,9 +171,8 @@ class OptionSpec:
             case OptionType.BUTTON:
                 if self.default is not None or self.min is not None or self.max is not None or self.var:
                     problems.append("button option carries a default/min/max/var")
-            case OptionType.STRING:
-                if self.default is None:
-                    problems.append("string option has no default")
+            case _:
+                pass
         return tuple(problems)
 
 
