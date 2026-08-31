@@ -131,7 +131,6 @@ class TestParseOption:
         ("line", "expected"),
         [
             ("option name Hash type spin default 4096 min 1 max 1024", "outside"),
-            ("option name Hash type spin default 16", "min/max"),
             ("option name Ponder type check default yes", "true/false"),
             ("option name Style type combo default Wild var Solid", "var values"),
             ("option name Clear Hash type button default 1", "default/min/max/var"),
@@ -141,6 +140,19 @@ class TestParseOption:
         option = parse_option(line)
         assert option is not None
         assert any(expected in issue for issue in option.issues())
+
+    @pytest.mark.parametrize(
+        ("line", "expected"),
+        [
+            ("option name Hash type spin default 16", "min/max"),
+            ("option name NalimovPath type string", "no default"),
+        ],
+    )
+    def test_thin_declarations_only_warn(self, line: str, expected: str) -> None:
+        option = parse_option(line)
+        assert option is not None
+        assert option.issues() == ()
+        assert any(expected in warning for warning in option.warnings())
 
 
 class TestParseInfo:

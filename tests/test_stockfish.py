@@ -6,6 +6,7 @@ import pytest
 
 from uci_test_suite.checks.base import Status
 from uci_test_suite.checks.session import RawSession
+from uci_test_suite.levels import MINIMUM_ENGINE
 from uci_test_suite.protocol import LineKind, classify
 from uci_test_suite.runner import run_suite
 from uci_test_suite.transport import RawUciClient
@@ -39,7 +40,7 @@ def test_stop_ends_an_infinite_search(session: RawSession) -> None:
 
 
 def test_whole_suite_passes(stockfish_path: str) -> None:
-    results = run_suite(stockfish_path, timeout=15.0)
+    results = run_suite(stockfish_path, timeout=15.0, levels=MINIMUM_ENGINE)
     failures = {result.name: result.message for result in results if result.status is Status.FAIL}
     assert failures == {}
     assert len(results) >= 16

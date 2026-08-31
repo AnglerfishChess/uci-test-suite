@@ -1,9 +1,7 @@
 """Fixtures giving the tests engine doubles and, when installed, a real engine."""
 
 import os
-import shlex
 import shutil
-import stat
 import sys
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -40,16 +38,9 @@ def fake_session(fake_engine: RawUciClient) -> RawSession:
 
 
 @pytest.fixture
-def engine_script(tmp_path: Path) -> Callable[..., Path]:
-    """A factory for single executable paths running the engine double, as a command line takes one path."""
-
-    def make(*flags: str) -> Path:
-        script = tmp_path / f"fake-engine{len(list(tmp_path.iterdir()))}"
-        script.write_text(f'#!/bin/sh\nexec {shlex.join(fake_engine_command(*flags))} "$@"\n')
-        script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        return script
-
-    return make
+def engine_argv() -> Callable[..., list[str]]:
+    """A factory for the command line of an engine double with the given misbehaviour flags."""
+    return lambda *flags: fake_engine_command(*flags)
 
 
 @pytest.fixture(scope="session")
