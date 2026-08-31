@@ -15,13 +15,10 @@ classifiers = [
     "Topic :: Software Development :: Testing",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent"
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "chess>=1.11.2,<2.0.0",
     "click>=8.1.8,<9.0.0",
@@ -31,9 +28,10 @@ dependencies = [
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.3.0",
+    "pyrefly>=0.16.0",
     "ruff>=0.11.4",
     "uv-publish>=1.2",
 ]
@@ -43,8 +41,20 @@ uci-test-suite = "uci_test_suite.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "."}
-packages = ["uci_test_suite"]
+packages = ["uci_test_suite", "uci_test_suite.checks"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py313"
+
+[tool.pyrefly]
+project-includes = ["uci_test_suite", "tests"]
+search-path = [".", "tests"]
+python-version = "3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers -ra"
+markers = [
+    "stockfish: integration test requiring the stockfish binary on PATH",
+]
