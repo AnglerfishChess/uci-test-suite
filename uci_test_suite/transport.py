@@ -4,10 +4,12 @@ Line-level transport to a UCI engine subprocess.
 Owns the process and its pipes, timestamps every line in both directions, and never interprets the protocol.
 """
 
+import io
 import logging
 import os
 import queue
 import subprocess
+import sys
 import threading
 import time
 from collections.abc import Callable, Sequence
@@ -32,6 +34,9 @@ DEFAULT_TIMEOUT: Final[float] = 10.0
 
 #: How long a stopping engine gets to exit on its own before being killed.
 DEFAULT_QUIT_TIMEOUT: Final[float] = 5.0
+
+#: Keeps a console engine from flashing its own window open on Windows; zero everywhere else.
+_NO_WINDOW: Final[int] = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
 
 
 class TransportError(Exception):
@@ -104,6 +109,7 @@ class RawUciClient:
         self._lock = threading.Lock()
         self._started_at: float = 0.0
         self._eof = False
+        self._killed = False
 
     @property
     def transcript(self) -> tuple[Line, ...]:
@@ -122,6 +128,11 @@ class RawUciClient:
         """Exit code of the engine process; ``None`` while it runs or before it is started."""
         return self._process.poll() if self._process is not None else None
 
+    @property
+    def killed(self) -> bool:
+        """Whether the engine had to be terminated instead of exiting by itself."""
+        return self._killed
+
     def start(self) -> None:
         """Spawn the engine process and begin collecting its output."""
         if self._process is not None:
@@ -139,9 +150,13 @@ class RawUciClient:
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
+                creationflags=_NO_WINDOW,
             )
         except OSError as error:
             raise TransportError(f"cannot start {' '.join(self.command)}: {error}") from error
+        if isinstance(self._process.stdin, io.TextIOWrapper):
+            # UCI commands end in a bare newline on every platform.
+            self._process.stdin.reconfigure(newline="\n")
         threading.Thread(target=self._pump_stdout, name="uci-stdout", daemon=True).start()
         threading.Thread(target=self._pump_stderr, name="uci-stderr", daemon=True).start()
 
@@ -259,11 +274,12 @@ class RawUciClient:
         process = self._process
         if process is None or process.poll() is not None:
             return
+        self._killed = True
         process.kill()
         try:
             process.wait(timeout=2.0)
         except subprocess.TimeoutExpired:
-            logger.error("Engine survived SIGKILL")
+            logger.error("Engine survived being killed")
 
     def __enter__(self) -> Self:
         self.start()
@@ -294,6 +310,12 @@ class RawUciClient:
         except (OSError, ValueError):
             logger.debug("Engine stdout reader stopped", exc_info=True)
         finally:
+            # Give the process a moment to be reaped, so that its exit code is known by the time the end of its
+            # output is reported.
+            try:
+                process.wait(timeout=DEFAULT_QUIT_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                logger.debug("Engine closed its output but is still running")
             self._queue.put(None)
 
     def _pump_stderr(self) -> None:
