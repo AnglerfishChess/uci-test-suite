@@ -105,31 +105,6 @@ def check_multipv(session: RawSession) -> Outcome:
     )
 
 
-@raw_check("searchmoves", Level.OPTIONAL, budget=25.0)
-def check_searchmoves(session: RawSession) -> Outcome:
-    """
-    ``go searchmoves ...`` restricts the answer to the listed moves.
-
-    Spec: "searchmoves <move1> .... <movei> ... restrict search to this moves only".
-    """
-    board = chess.Board()
-    allowed = ["a2a3", "h2h3"]
-    session.set_position()
-    result = session.go(f"movetime 300 searchmoves {' '.join(allowed)}")
-    verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
-    if result.bestmove.move not in allowed:
-        raise CheckSkipped(
-            f"engine ignores searchmoves: answered {result.bestmove.move}, outside {allowed}",
-            bestmove=result.bestmove.move,
-            searchmoves=allowed,
-        )
-    return Outcome(
-        f"answer {result.bestmove.move} stayed within the {len(allowed)} listed moves",
-        details={"searchmoves": allowed, "bestmove": result.bestmove.move, "bestmove_san": board.san(move)},
-    )
-
-
 @raw_check("chess960", Level.OPTIONAL, budget=25.0)
 def check_chess960(session: RawSession) -> Outcome:
     """

@@ -21,8 +21,8 @@ The UCI Test Suite is designed to test the correctness of a chess engine's imple
 | L0 | Process | Starts, ignores junk before and after the handshake, keeps stdout well-formed, quits cleanly |
 | L1 | Handshake | `uci` → `id name`/`id author`/`option`/`uciok`; `isready` → `readyok` |
 | L2 | Play | `position startpos`/`position fen`, `go movetime`, clock controls, `stop`, and a legal `bestmove` every time |
-| L3 | Session | `ucinewgame`, `setoption` on every declared option, `debug`, the `go` limits, `isready` while searching, the `info` stream |
-| L4 | Optional | Ponder, MultiPV, `searchmoves`, `UCI_Chess960`, `UCI_AnalyseMode`, `register`/`copyprotection` — each skipped when not offered |
+| L3 | Session | `ucinewgame`, `setoption` on every declared option, `debug`, the `go` limits and `searchmoves`, `isready` while searching, the `info` stream |
+| L4 | Optional | Ponder, MultiPV, `UCI_Chess960`, `UCI_AnalyseMode`, `register`/`copyprotection` — each skipped when not offered |
 | L5 | Robustness | Malformed commands, impossible positions, illegal moves, junk bursts, `quit` mid-search: no crash, no hang, `isready` still answered |
 | L6 | Acceptance | `python-chess` drives the engine end to end |
 

@@ -1,4 +1,4 @@
-"""L3 — a whole session: new games, options, debug, the ``go`` limits, and the ``info`` stream."""
+"""L3 — a whole session: new games, options, debug, the ``go`` limits and restriction, and the ``info`` stream."""
 
 import time
 from itertools import pairwise
@@ -186,6 +186,32 @@ def check_go_movestogo(session: RawSession) -> Outcome:
     return Outcome(
         f"bestmove {result.bestmove.move} in {result.elapsed:.3f} s",
         details=move_details(board, result, move) | {"go": arguments},
+    )
+
+
+@raw_check("searchmoves", Level.SESSION, budget=25.0)
+def check_searchmoves(session: RawSession) -> Outcome:
+    """
+    ``go searchmoves ...`` restricts the answer to the listed moves.
+
+    Spec: "searchmoves <move1> .... <movei> ... restrict search to this moves only". A standard ``go``
+    argument with no way to declare non-support, so ignoring it is a conformance failure, not a skip.
+    """
+    board = chess.Board()
+    allowed = ["a2a3", "h2h3"]
+    session.set_position()
+    result = session.go(f"movetime 300 searchmoves {' '.join(allowed)}")
+    verify_single_bestmove(result)
+    move = verify_move(board, result.bestmove, "the starting position")
+    if result.bestmove.move not in allowed:
+        raise CheckFailure(
+            f"answered {result.bestmove.move}, outside the searchmoves set {allowed}",
+            bestmove=result.bestmove.move,
+            searchmoves=allowed,
+        )
+    return Outcome(
+        f"answer {result.bestmove.move} stayed within the {len(allowed)} listed moves",
+        details={"searchmoves": allowed, "bestmove": result.bestmove.move, "bestmove_san": board.san(move)},
     )
 
 

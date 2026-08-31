@@ -171,6 +171,12 @@ class TestProcessFaults:
         assert "before being addressed" in message(results, "engine_starts")
 
 
+class TestSessionFeatures:
+    def test_searchmoves_restricts_the_answer(self) -> None:
+        results = run(levels=[Level.SESSION])
+        assert verdicts(results)["searchmoves"] is Status.PASS
+
+
 class TestSessionFaults:
     def test_bestmove_without_a_go(self) -> None:
         results = run("--bestmove-without-go", levels=[Level.SESSION], timeout=2.0)
@@ -181,6 +187,13 @@ class TestSessionFaults:
         results = run("--depth-goes-back", levels=[Level.SESSION], timeout=2.0)
         assert verdicts(results)["info_stream"] is Status.FAIL
         assert "backwards" in message(results, "info_stream")
+
+    def test_searchmoves_ignored(self) -> None:
+        results = run("--ignore-searchmoves", levels=[Level.SESSION], timeout=2.0)
+        assert verdicts(results)["searchmoves"] is Status.FAIL
+        assert "g1h3" in message(results, "searchmoves")
+        assert "a2a3" in message(results, "searchmoves")
+        assert "h2h3" in message(results, "searchmoves")
 
 
 class TestRobustnessFaults:
@@ -205,7 +218,6 @@ class TestOptionalFeatures:
         results = run(levels=[Level.OPTIONAL])
         assert verdicts(results)["ponder"] is Status.PASS
         assert verdicts(results)["multipv"] is Status.PASS
-        assert verdicts(results)["searchmoves"] is Status.PASS
         assert verdicts(results)["chess960"] is Status.PASS
         assert verdicts(results)["analyse_mode"] is Status.PASS
 

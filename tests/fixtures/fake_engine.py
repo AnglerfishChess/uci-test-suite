@@ -5,7 +5,7 @@ A scripted UCI engine double.
 With no arguments it behaves conformingly; each flag makes it break one rule: ``--no-uciok``, ``--no-author``,
 ``--no-options``, ``--bad-option``, ``--double-bestmove``, ``--illegal-move``, ``--die-on-go``,
 ``--crash-on-fen``, ``--hang-on-stop``, ``--bestmove-without-go``, ``--depth-goes-back``, ``--zombie-on-quit``,
-``--copyprotection``, ``--noisy-start``.
+``--copyprotection``, ``--noisy-start``, ``--ignore-searchmoves``.
 """
 
 import sys
@@ -87,7 +87,8 @@ def main(flags: set[str]) -> int:
             if "infinite" in command or "ponder" in command:
                 waiting = True
             else:
-                answer(board, multipv, flags, searchmoves(command))
+                restricted = () if "--ignore-searchmoves" in flags else searchmoves(command)
+                answer(board, multipv, flags, restricted)
         elif word in ("stop", "ponderhit"):
             if waiting and "--hang-on-stop" not in flags:
                 waiting = False
