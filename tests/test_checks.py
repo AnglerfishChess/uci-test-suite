@@ -51,7 +51,8 @@ class TestSession:
         assert handshake.id["author"] == "The UCI test suite"
         assert handshake.option("Hash") is not None
         button = handshake.option("Clear Hash")
-        assert button is not None and button.type is OptionType.BUTTON
+        assert button is not None
+        assert button.type is OptionType.BUTTON
         assert handshake.unrecognized == ("Fake engine, not a real one",)
         assert handshake.invalid_options == ()
 

@@ -46,6 +46,15 @@ packages = ["uci_test_suite", "uci_test_suite.checks"]
 line-length = 120
 target-version = "py313"
 
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "PT", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Parametrized over many differently-invalid inputs, each raising a differently-worded ValueError;
+# the message content is already pinned by the dedicated tests below. A `match` here would either
+# be too narrow (fail on most cases) or too loose to mean anything.
+"tests/test_levels.py" = ["PT011"]
+
 [tool.pyrefly]
 project-includes = ["uci_test_suite", "tests"]
 search-path = [".", "tests"]

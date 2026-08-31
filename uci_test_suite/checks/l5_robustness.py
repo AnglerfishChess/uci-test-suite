@@ -91,7 +91,7 @@ def check_impossible_fen(session: RawSession) -> Outcome:
 
     Spec: "position [fen <fenstring> | startpos ]" — a GUI may send anything; the engine must stay usable.
     """
-    for label, fen in IMPOSSIBLE_FENS:
+    for _label, fen in IMPOSSIBLE_FENS:
         _survives(session, [f"position fen {fen}"], settle=0.2)
 
     board = chess.Board()

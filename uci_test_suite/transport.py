@@ -4,6 +4,7 @@ Line-level transport to a UCI engine subprocess.
 Owns the process and its pipes, timestamps every line in both directions, and never interprets the protocol.
 """
 
+import contextlib
 import io
 import logging
 import os
@@ -176,7 +177,8 @@ class RawUciClient:
         """Write one command line to the engine."""
         self.require_alive()
         process = self._process
-        assert process is not None and process.stdin is not None
+        assert process is not None
+        assert process.stdin is not None
         line = self._record(Direction.SENT, text)
         logger.debug("%s", line)
         try:
@@ -301,7 +303,8 @@ class RawUciClient:
 
     def _pump_stdout(self) -> None:
         process = self._process
-        assert process is not None and process.stdout is not None
+        assert process is not None
+        assert process.stdout is not None
         try:
             for raw in process.stdout:
                 line = self._record(Direction.RECEIVED, raw.rstrip("\r\n"))
@@ -320,7 +323,8 @@ class RawUciClient:
 
     def _pump_stderr(self) -> None:
         process = self._process
-        assert process is not None and process.stderr is not None
+        assert process is not None
+        assert process.stderr is not None
         try:
             for raw in process.stderr:
                 text = raw.rstrip("\r\n")
@@ -336,10 +340,8 @@ class RawUciClient:
             return
         for pipe in (process.stdin, process.stdout, process.stderr):
             if pipe is not None:
-                try:
+                with contextlib.suppress(OSError):
                     pipe.close()
-                except OSError:
-                    pass
 
 
 def _first_token_is(token: str) -> Callable[[str], bool]:
