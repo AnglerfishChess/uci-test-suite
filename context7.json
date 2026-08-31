@@ -1,0 +1,20 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "uci-test-suite",
+  "description": "UCI conformance test suite for chess engines: checks that a program correctly speaks the UCI protocol, from process behaviour to optional features, never its playing strength",
+  "url": "https://context7.com/AnglerfishChess/uci-test-suite",
+  "folders": [],
+  "excludeFolders": [
+    "uci_test_suite",
+    "tests",
+    ".github"
+  ],
+  "rules": [
+    "Run it with no installation: uvx uci-test-suite <engine>. The engine is a full command line, not only a binary path: uvx uci-test-suite python my_engine.py, or uvx uci-test-suite -- java -jar engine.jar --threads 1 (suite options go before the --).",
+    "Checks are grouped into protocol levels L0-L6; L0-L2 together are the minimum a playable UCI engine must implement. Select levels with --level/-l: -l 2, -l 0-2, -l 0-2,5. Without it, every level runs.",
+    "--list prints every check with its level and purpose; --json writes machine-readable results (level, name, status, message, details, timings) to stdout with the human report on stderr.",
+    "The exit code is non-zero if any selected check failed, so a CI step can gate on it directly.",
+    "L4 optional features (Ponder, MultiPV, UCI_Chess960, UCI_AnalyseMode) are skipped, not failed, when the engine does not declare them; a failure at L0-L3 or L5 is a real conformance bug.",
+    "It tests protocol correctness only, never playing strength."
+  ]
+}
