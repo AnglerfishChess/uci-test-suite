@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from click.testing import CliRunner
 
+from uci_test_suite import __version__
 from uci_test_suite.__main__ import main
 
 
@@ -130,3 +131,10 @@ def test_help_names_the_minimum_engine() -> None:
     assert result.exit_code == 0
     assert "L0-L2" in result.output
     assert "minimum" in result.output
+
+
+def test_version_names_the_program_and_version() -> None:
+    result = CliRunner().invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert "uci-test-suite" in result.output
+    assert __version__ in result.output

@@ -10,6 +10,7 @@ from typing import Any, Final
 
 import click
 
+from uci_test_suite import __version__
 from uci_test_suite.checks.base import CheckResult, Status
 from uci_test_suite.checks.registry import checks_of
 from uci_test_suite.levels import LEVEL_RANGE_SYNTAX, Level, format_levels, parse_levels
@@ -25,6 +26,7 @@ _STATUS_COLOR: Final[dict[Status, str]] = {
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.version_option(version=__version__, prog_name="uci-test-suite")
 @click.argument("engine", nargs=-1, type=click.UNPROCESSED)
 @click.option(
     "--level",

@@ -5,6 +5,8 @@ name: Publish
 on:
   release:
     types: [published]
+  # Dry run: proves the build. PyPI has no dry-run upload, so this only builds.
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -20,6 +22,7 @@ jobs:
       - run: uv build
 
       - name: Verify built version matches release tag
+        if: github.event_name == 'release'
         run: |
           want="${GITHUB_REF_NAME#v}"
           got="$(basename dist/*.tar.gz .tar.gz | sed -E 's/^uci_test_suite-//')"
@@ -28,4 +31,5 @@ jobs:
             exit 1
           fi
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - if: github.event_name == 'release'
+        uses: pypa/gh-action-pypi-publish@release/v1
