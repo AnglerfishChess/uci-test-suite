@@ -1,65 +1,68 @@
-"""L6 — a mainstream UCI client, ``python-chess``, drives the engine end to end."""
+"""L6 — a mainstream UCI client, ``esca``, drives the engine end to end."""
 
-import chess
-import chess.engine
+import esca
+from esca.uci import Limits
 
 from uci_test_suite.checks.base import CheckFailure, Outcome
 from uci_test_suite.checks.registry import acceptance_check
 from uci_test_suite.checks.session import AcceptanceSession
 
 
-@acceptance_check("pychess_handshake", budget=25.0)
-def check_pychess_handshake(session: AcceptanceSession) -> Outcome:
-    """``python-chess`` completes the handshake and reads the engine's identity and options."""
-    identifiers = dict(session.engine.id)
-    missing = [key for key in ("name", "author") if not identifiers.get(key)]
+@acceptance_check("client_handshake", budget=25.0)
+def check_client_handshake(session: AcceptanceSession) -> Outcome:
+    """A UCI client completes the handshake and reads the engine's identity and options."""
+    identifiers = {"name": session.engine.name, "author": session.engine.author}
+    missing = [key for key, value in identifiers.items() if not value]
     if missing:
-        raise CheckFailure(f"python-chess did not read the engine {' and '.join(missing)}", id=identifiers)
-    options = list(session.engine.options)
+        raise CheckFailure(f"the client did not read the engine {' and '.join(missing)}", id=identifiers)
+    options = sorted(session.engine.options)
     return Outcome(
         f"{identifiers['name']} accepted, {len(options)} options read",
         details={"id": identifiers, "options": options},
     )
 
 
-@acceptance_check("pychess_play", budget=25.0)
-def check_pychess_play(session: AcceptanceSession) -> Outcome:
-    """``python-chess`` gets a legal move out of the engine with ``play()``."""
-    board = chess.Board()
-    result = session.engine.play(board, chess.engine.Limit(time=0.25))
-    if result.move is None:
-        raise CheckFailure("python-chess got no move from the engine")
-    if result.move not in board.legal_moves:
-        raise CheckFailure(f"python-chess got the illegal move {result.move.uci()}", bestmove=result.move.uci())
+@acceptance_check("client_play", budget=25.0)
+def check_client_play(session: AcceptanceSession) -> Outcome:
+    """A UCI client gets a legal move out of the engine with ``play()``."""
+    game = esca.Game()
+    answer = session.engine.play(game, Limits(movetime=0.25))
+    if answer.best is None:
+        raise CheckFailure("the client got no move from the engine")
+    if answer.best not in game.legal_moves():
+        raise CheckFailure(f"the client got the illegal move {answer.best.uci}", bestmove=answer.best.uci)
     return Outcome(
-        f"played {board.san(result.move)}",
+        f"played {game.move_to_san(answer.best)}",
         details={
-            "bestmove": result.move.uci(),
-            "bestmove_san": board.san(result.move),
-            "ponder": result.ponder.uci() if result.ponder else None,
+            "bestmove": answer.best.uci,
+            "bestmove_san": game.move_to_san(answer.best),
+            "ponder": answer.ponder.uci if answer.ponder is not None else None,
         },
     )
 
 
-@acceptance_check("pychess_analyse", budget=45.0)
-def check_pychess_analyse(session: AcceptanceSession) -> Outcome:
+@acceptance_check("client_analyse", budget=45.0)
+def check_client_analyse(session: AcceptanceSession) -> Outcome:
     """
-    ``python-chess`` gets an analysis out of the engine with ``analyse()``.
+    A UCI client gets an analysis out of the engine with ``analyse()``.
 
     A search that reports no score still conforms: ``info score`` is optional in the spec.
     """
-    board = chess.Board()
-    info = session.engine.analyse(board, chess.engine.Limit(depth=8))
-    keys = sorted(str(key) for key in info)
-    score = info.get("score")
+    game = esca.Game()
+    reports = session.engine.analyse(game, Limits(depth=8))
+    if not reports:
+        raise CheckFailure("the client got no info line out of the engine")
+    info = reports[0]
+    score = f"mate {info.mate}" if info.mate is not None else (f"cp {info.cp}" if info.cp is not None else None)
     return Outcome(
-        f"analysis at depth {info.get('depth')} scored {score.white()}"
+        f"analysis at depth {info.depth} scored {score}"
         if score is not None
-        else f"analysis at depth {info.get('depth')}, no score reported",
+        else f"analysis at depth {info.depth}, no score reported",
         details={
-            "depth": info.get("depth"),
-            "score": str(score.white()) if score is not None else None,
-            "keys": keys,
+            "depth": info.depth,
+            "score": score,
+            "pv": [move.uci for move in info.pv],
+            "variations": len(reports),
             "note": None if score is not None else "no info score line; the spec does not require one",
         },
     )

@@ -30,8 +30,8 @@ class Driver(StrEnum):
     FRESH = "fresh"
     """Speaks UCI over the suite's own line transport, on an engine process started for this check alone."""
 
-    PYCHESS = "pychess"
-    """Drives the engine through the ``python-chess`` client."""
+    CLIENT = "client"
+    """Drives the engine through the ``esca`` UCI client."""
 
 
 class Status(StrEnum):

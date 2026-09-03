@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Final
 
-import chess.engine
+import esca.uci
 
 from uci_test_suite.protocol import (
     BestMove,
@@ -285,7 +285,7 @@ class ProcessSession:
 
 @dataclass(slots=True)
 class AcceptanceSession:
-    """A ``python-chess`` client bound to the engine, standing in for a mainstream GUI."""
+    """An ``esca`` UCI client bound to the engine, standing in for a mainstream GUI."""
 
-    engine: chess.engine.SimpleEngine
+    engine: esca.uci.Engine
     notes: dict[str, str] = field(default_factory=dict)

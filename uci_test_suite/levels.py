@@ -53,7 +53,7 @@ _SUMMARIES: Final[dict[Level, str]] = {
     Level.SESSION: "a whole game session: ucinewgame, setoption, debug, the go limits, info lines",
     Level.OPTIONAL: "features an engine may decline; skipped unless it advertises them",
     Level.ROBUSTNESS: "unhappy paths: neither a crash nor a hang, and isready still answered",
-    Level.ACCEPTANCE: "a mainstream UCI client (python-chess) drives the engine end to end",
+    Level.ACCEPTANCE: "a mainstream UCI client (esca) drives the engine end to end",
 }
 
 #: The levels an engine must pass to be a UCI engine at all.

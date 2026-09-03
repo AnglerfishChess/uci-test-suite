@@ -6,7 +6,7 @@ from collections.abc import Collection, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, Final, Self
 
-import chess.engine
+import esca.uci
 
 from uci_test_suite.checks.base import Check, CheckFailure, CheckResult, CheckSkipped, Driver, Status
 from uci_test_suite.checks.registry import checks_of
@@ -56,7 +56,7 @@ def run_suite(
 def _run_level(command: tuple[str, ...], checks: Sequence[Check[Any]], *, scale: float) -> list[CheckResult]:
     """Run one level's checks, opening an engine session per driver and closing them all at the end."""
     results: list[CheckResult] = []
-    shared = (Driver.RAW, Driver.PYCHESS)
+    shared = (Driver.RAW, Driver.CLIENT)
     with _Sessions(command, scale) as sessions:
         unusable: dict[Driver, str] = {}
         for check in checks:
@@ -82,7 +82,7 @@ class _Sessions:
         self.scale = scale
         self._client: RawUciClient | None = None
         self._raw: RawSession | None = None
-        self._simple: chess.engine.SimpleEngine | None = None
+        self._client_engine: esca.uci.Engine | None = None
         self._quit_timeout = DEFAULT_QUIT_TIMEOUT
 
     def __enter__(self) -> Self:
@@ -92,12 +92,12 @@ class _Sessions:
         if self._client is not None:
             self._client.quit(timeout=self._quit_timeout)
             logger.debug("Engine exited with code %s", self._client.returncode)
-        if self._simple is not None:
+        if self._client_engine is not None:
             try:
-                self._simple.quit()
-            except chess.engine.EngineError as error:
-                logger.debug("python-chess could not quit the engine cleanly: %s", error)
-            self._simple.close()
+                self._client_engine.quit()
+            except esca.uci.UciError as error:
+                logger.debug("The client could not quit the engine cleanly: %s", error)
+                self._client_engine.kill()
 
     @contextmanager
     def open(self, check: Check[Any]) -> Iterator[tuple[Any, str | None]]:
@@ -119,8 +119,8 @@ class _Sessions:
                     client.quit(timeout=min(budget, DEFAULT_QUIT_TIMEOUT))
             case Driver.RAW:
                 yield self._raw_session(budget)
-            case Driver.PYCHESS:
-                yield self._pychess_session(budget)
+            case Driver.CLIENT:
+                yield self._client_session(budget)
 
     def settle(self, check: Check[Any]) -> None:
         """Put a shared session back into an idle, responsive state after a check."""
@@ -149,14 +149,18 @@ class _Sessions:
         self._quit_timeout = min(budget, DEFAULT_QUIT_TIMEOUT)
         return self._raw, None
 
-    def _pychess_session(self, budget: float) -> tuple[AcceptanceSession | None, str | None]:
-        if self._simple is None:
+    def _client_session(self, budget: float) -> tuple[AcceptanceSession | None, str | None]:
+        if self._client_engine is None:
             try:
-                self._simple = chess.engine.SimpleEngine.popen_uci(list(self.command), timeout=budget)
-            except (OSError, ValueError, chess.engine.EngineError) as error:
-                return None, f"python-chess cannot start the engine: {error}"
-        self._simple.timeout = budget
-        return AcceptanceSession(engine=self._simple), None
+                engine = esca.uci.Engine(self.command[0], self.command[1:], timeout=budget)
+                engine.handshake()
+            except (OSError, ValueError, esca.uci.UciError) as error:
+                return None, f"the client cannot start the engine: {error}"
+            self._client_engine = engine
+        if not self._client_engine.is_alive:
+            return None, "the engine is no longer running"
+        self._client_engine.timeout = budget
+        return AcceptanceSession(engine=self._client_engine), None
 
 
 def _run[S](check: Check[S], session: S) -> CheckResult:

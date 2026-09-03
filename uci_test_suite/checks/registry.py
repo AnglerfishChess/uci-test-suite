@@ -66,10 +66,10 @@ def fresh_check(name: str, level: Level, budget: float = DEFAULT_BUDGET) -> Call
 
 
 def acceptance_check(name: str, budget: float = DEFAULT_BUDGET) -> Callable[[AcceptanceCheckFunc], AcceptanceCheckFunc]:
-    """Register a check that drives the engine through ``python-chess``."""
+    """Register a check that drives the engine through the ``esca`` UCI client."""
 
     def decorate(func: AcceptanceCheckFunc) -> AcceptanceCheckFunc:
-        CHECKS.append(Check(name=name, level=Level.ACCEPTANCE, driver=Driver.PYCHESS, func=func, budget=budget))
+        CHECKS.append(Check(name=name, level=Level.ACCEPTANCE, driver=Driver.CLIENT, func=func, budget=budget))
         return func
 
     return decorate

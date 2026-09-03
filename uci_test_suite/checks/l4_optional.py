@@ -2,7 +2,7 @@
 
 from typing import Final
 
-import chess
+import esca
 
 from uci_test_suite.checks.base import CheckFailure, CheckSkipped, Outcome
 from uci_test_suite.checks.registry import raw_check
@@ -32,9 +32,9 @@ def check_ponder(session: RawSession) -> Outcome:
         raise CheckFailure(f"the Ponder option is of type {option.type}, not check")
 
     moves = ["e2e4", "e7e5"]
-    board = chess.Board()
+    game = esca.Game()
     for text in moves:
-        board.push_uci(text)
+        game.play(text)
 
     session.set_option("Ponder", "true")
     try:
@@ -50,12 +50,12 @@ def check_ponder(session: RawSession) -> Outcome:
         session.set_option("Ponder", option.default or "false")
 
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, f"the position after {' '.join(moves)}")
+    move = verify_move(game, result.bestmove, f"the position after {' '.join(moves)}")
     return Outcome(
         f"ponder search held until ponderhit, then answered {result.bestmove.move}",
         details={
             "bestmove": result.bestmove.move,
-            "bestmove_san": board.san(move),
+            "bestmove_san": game.move_to_san(move),
             "ponder": result.bestmove.ponder,
             "ponderhit_latency_s": round(result.elapsed, 3),
         },
@@ -87,8 +87,8 @@ def check_multipv(session: RawSession) -> Outcome:
         session.set_option("MultiPV", option.default or "1")
 
     verify_single_bestmove(result)
-    board = chess.Board()
-    verify_move(board, result.bestmove, "the starting position")
+    game = esca.Game()
+    verify_move(game, result.bestmove, "the starting position")
 
     seen = sorted({info.multipv for info in result.infos if info.multipv is not None})
     if not seen:
@@ -118,8 +118,8 @@ def check_chess960(session: RawSession) -> Outcome:
     if option.type is not OptionType.CHECK:
         raise CheckFailure(f"the UCI_Chess960 option is of type {option.type}, not check")
 
-    board = chess.Board(CHESS960_FEN, chess960=True)
-    board.push_uci(CHESS960_CASTLING)
+    game = esca.Game.from_fen(CHESS960_FEN, variant=esca.CHESS960)
+    game.play(CHESS960_CASTLING)
     session.set_option("UCI_Chess960", "true")
     try:
         session.set_position(fen=CHESS960_FEN, moves=[CHESS960_CASTLING])
@@ -129,14 +129,14 @@ def check_chess960(session: RawSession) -> Outcome:
         session.set_option("UCI_Chess960", option.default or "false")
 
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, f"the Chess960 position after {CHESS960_CASTLING}")
+    move = verify_move(game, result.bestmove, f"the Chess960 position after {CHESS960_CASTLING}")
     return Outcome(
         f"castling as {CHESS960_CASTLING} accepted, answered {result.bestmove.move}",
         details={
             "fen": CHESS960_FEN,
             "castling_move": CHESS960_CASTLING,
             "bestmove": result.bestmove.move,
-            "bestmove_san": board.san(move),
+            "bestmove_san": game.move_to_san(move),
         },
     )
 
@@ -154,7 +154,7 @@ def check_analyse_mode(session: RawSession) -> Outcome:
     if option.type is not OptionType.CHECK:
         raise CheckFailure(f"the UCI_AnalyseMode option is of type {option.type}, not check")
 
-    board = chess.Board()
+    game = esca.Game()
     session.set_option("UCI_AnalyseMode", "true")
     try:
         session.set_position()
@@ -164,10 +164,10 @@ def check_analyse_mode(session: RawSession) -> Outcome:
         session.set_option("UCI_AnalyseMode", option.default or "false")
 
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     return Outcome(
         f"analyse mode accepted, answered {result.bestmove.move}",
-        details={"bestmove": result.bestmove.move, "bestmove_san": board.san(move)},
+        details={"bestmove": result.bestmove.move, "bestmove_san": game.move_to_san(move)},
     )
 
 

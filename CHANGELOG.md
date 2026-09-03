@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The suite reads positions and drives the acceptance level with `esca`.
+
 ## 0.2.0 — 2026-08-31
 
 The suite now owns the UCI wire: engines are driven over a raw line-level

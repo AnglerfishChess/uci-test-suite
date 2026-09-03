@@ -2,7 +2,7 @@
 
 from typing import Final
 
-import chess
+import esca
 
 from uci_test_suite.checks.base import CheckFailure, Outcome
 from uci_test_suite.checks.registry import raw_check
@@ -16,6 +16,9 @@ MATE_IN_ONE_FEN: Final[str] = "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB
 
 #: A position whose only sensible White move is a promotion.
 PROMOTION_FEN: Final[str] = "8/P6k/8/8/8/8/8/6K1 w - - 0 1"
+
+#: The position every game starts from, as FEN.
+STARTING_FEN: Final[str] = esca.CLASSIC.start_position().fen
 
 #: Milliseconds given to a search that only has to produce some move.
 SHORT_MOVETIME: Final[int] = 250
@@ -31,12 +34,14 @@ def check_position_startpos(session: RawSession) -> Outcome:
 
     Spec: "position [fen <fenstring> | startpos ] moves <move1> .... <movei>".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     result = session.go(f"movetime {SHORT_MOVETIME}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
-    return Outcome(f"bestmove {result.bestmove.move} ({board.san(move)})", details=move_details(board, result, move))
+    move = verify_move(game, result.bestmove, "the starting position")
+    return Outcome(
+        f"bestmove {result.bestmove.move} ({game.move_to_san(move)})", details=move_details(game, result, move)
+    )
 
 
 @raw_check("position_startpos_moves", Level.PLAY, budget=15.0)
@@ -47,16 +52,16 @@ def check_position_startpos_moves(session: RawSession) -> Outcome:
     Spec: "position ... moves <move1> .... <movei> ... play the moves on the internal chess board".
     """
     moves = ["e2e4", "e7e5", "g1f3"]
-    board = chess.Board()
+    game = esca.Game()
     for text in moves:
-        board.push_uci(text)
+        game.play(text)
     session.set_position(moves=moves)
     result = session.go(f"movetime {SHORT_MOVETIME}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, f"the position after {' '.join(moves)}")
+    move = verify_move(game, result.bestmove, f"the position after {' '.join(moves)}")
     return Outcome(
         f"bestmove {result.bestmove.move} after {' '.join(moves)}",
-        details=move_details(board, result, move) | {"moves": moves},
+        details=move_details(game, result, move) | {"moves": moves},
     )
 
 
@@ -67,16 +72,16 @@ def check_position_fen(session: RawSession) -> Outcome:
 
     Spec: "position [fen <fenstring> | startpos ] ... set up the position described in fenstring".
     """
-    board = chess.Board(MATE_IN_ONE_FEN)
+    game = esca.Game.from_fen(MATE_IN_ONE_FEN)
     session.set_position(fen=MATE_IN_ONE_FEN)
     result = session.go(f"movetime {SHORT_MOVETIME}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the mate-in-one position")
-    details = move_details(board, result, move)
-    board.push(move)
-    details["found_mate_in_one"] = board.is_checkmate()
-    board.pop()
-    return Outcome(f"bestmove {result.bestmove.move} ({board.san(move)})", details=details)
+    move = verify_move(game, result.bestmove, "the mate-in-one position")
+    details = move_details(game, result, move)
+    game.play(move)
+    details["found_mate_in_one"] = game.outcome() == "checkmate"
+    game.undo()
+    return Outcome(f"bestmove {result.bestmove.move} ({game.move_to_san(move)})", details=details)
 
 
 @raw_check("position_fen_moves", Level.PLAY, budget=15.0)
@@ -87,16 +92,16 @@ def check_position_fen_moves(session: RawSession) -> Outcome:
     Spec: "position [fen <fenstring> | startpos ] moves <move1> .... <movei>".
     """
     moves = ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5"]
-    board = chess.Board()
+    game = esca.Game()
     for text in moves:
-        board.push_uci(text)
-    session.set_position(fen=chess.STARTING_FEN, moves=moves)
+        game.play(text)
+    session.set_position(fen=STARTING_FEN, moves=moves)
     result = session.go(f"movetime {SHORT_MOVETIME}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, f"the position after {' '.join(moves)}")
+    move = verify_move(game, result.bestmove, f"the position after {' '.join(moves)}")
     return Outcome(
         f"bestmove {result.bestmove.move} after {len(moves)} moves from a FEN",
-        details=move_details(board, result, move) | {"moves": moves},
+        details=move_details(game, result, move) | {"moves": moves},
     )
 
 
@@ -107,15 +112,15 @@ def check_promotion_notation(session: RawSession) -> Outcome:
 
     Spec: "the move format is in long algebraic notation ... examples: e2e4, e1g1, e7e8q".
     """
-    board = chess.Board(PROMOTION_FEN)
-    board.push_uci("a7a8q")
+    game = esca.Game.from_fen(PROMOTION_FEN)
+    game.play("a7a8q")
     session.set_position(fen=PROMOTION_FEN, moves=["a7a8q"])
     result = session.go(f"movetime {SHORT_MOVETIME}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the position after the promotion a7a8q")
+    move = verify_move(game, result.bestmove, "the position after the promotion a7a8q")
     return Outcome(
         f"promotion accepted, answered with {result.bestmove.move}",
-        details=move_details(board, result, move) | {"input_move": "a7a8q"},
+        details=move_details(game, result, move) | {"input_move": "a7a8q"},
     )
 
 
@@ -126,11 +131,11 @@ def check_go_movetime(session: RawSession) -> Outcome:
 
     Spec: "movetime <x> ... search exactly x mseconds".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     result = session.go(f"movetime {SHORT_MOVETIME}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     budget = SHORT_MOVETIME / 1000 + MOVETIME_SLACK
     if result.elapsed > budget:
         raise CheckFailure(
@@ -139,7 +144,7 @@ def check_go_movetime(session: RawSession) -> Outcome:
         )
     return Outcome(
         f"answered in {result.elapsed:.3f} s",
-        details=move_details(board, result, move) | {"movetime_ms": SHORT_MOVETIME},
+        details=move_details(game, result, move) | {"movetime_ms": SHORT_MOVETIME},
     )
 
 
@@ -150,12 +155,12 @@ def check_go_clock(session: RawSession) -> Outcome:
 
     Spec: "wtime <x> ... white has x msec left on the clock"; likewise btime, winc and binc.
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     clock = "wtime 2000 btime 2000 winc 100 binc 100"
     result = session.go(clock)
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     if result.elapsed > 4.0:
         raise CheckFailure(
             f"go {clock} took {result.elapsed:.3f} s, more than the clock allowed",
@@ -163,7 +168,7 @@ def check_go_clock(session: RawSession) -> Outcome:
         )
     return Outcome(
         f"bestmove {result.bestmove.move} in {result.elapsed:.3f} s of a 2 s clock",
-        details=move_details(board, result, move) | {"go": clock},
+        details=move_details(game, result, move) | {"go": clock},
     )
 
 
@@ -174,7 +179,7 @@ def check_stop_ends_search(session: RawSession) -> Outcome:
 
     Spec: "infinite ... search until the 'stop' command. ... stop: stop calculating as soon as possible".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     session.send_go("infinite")
     early = [line.text for line in session.collect_for(0.3) if classify(line.text) is LineKind.BESTMOVE]
@@ -184,9 +189,9 @@ def check_stop_ends_search(session: RawSession) -> Outcome:
     session.stop()
     result = session.collect_search()
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     session.sync()
     return Outcome(
         f"bestmove {result.bestmove.move} {result.elapsed:.3f} s after stop",
-        details=move_details(board, result, move) | {"stop_latency_s": round(result.elapsed, 3)},
+        details=move_details(game, result, move) | {"stop_latency_s": round(result.elapsed, 3)},
     )

@@ -4,7 +4,7 @@ import time
 from itertools import pairwise
 from typing import Final
 
-import chess
+import esca
 
 from uci_test_suite.checks.base import CheckFailure, CheckSkipped, Outcome
 from uci_test_suite.checks.registry import raw_check
@@ -30,17 +30,17 @@ def check_ucinewgame(session: RawSession) -> Outcome:
 
     Spec: "ucinewgame ... this is sent to the engine when the next search will be from a different game".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position(moves=["d2d4", "d7d5"])
     session.go("movetime 200")
     session.new_game()
     session.set_position()
     result = session.go("movetime 200")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position of the new game")
+    move = verify_move(game, result.bestmove, "the starting position of the new game")
     return Outcome(
         f"new game accepted, then bestmove {result.bestmove.move}",
-        details=move_details(board, result, move),
+        details=move_details(game, result, move),
     )
 
 
@@ -112,15 +112,15 @@ def check_go_depth(session: RawSession) -> Outcome:
 
     Spec: "depth <x> ... search x plies only".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     result = session.go(f"depth {SEARCH_DEPTH}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     depths = [info.depth for info in result.infos if info.depth is not None]
     return Outcome(
         f"depth {SEARCH_DEPTH} finished in {result.elapsed:.3f} s",
-        details=move_details(board, result, move)
+        details=move_details(game, result, move)
         | {"requested_depth": SEARCH_DEPTH, "max_reported_depth": max(depths) if depths else None},
     )
 
@@ -132,15 +132,15 @@ def check_go_nodes(session: RawSession) -> Outcome:
 
     Spec: "nodes <x> ... search x nodes only".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     result = session.go(f"nodes {SEARCH_NODES}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     nodes = [info.nodes for info in result.infos if info.nodes is not None]
     return Outcome(
         f"nodes {SEARCH_NODES} finished in {result.elapsed:.3f} s",
-        details=move_details(board, result, move) | {"max_reported_nodes": max(nodes) if nodes else None},
+        details=move_details(game, result, move) | {"max_reported_nodes": max(nodes) if nodes else None},
     )
 
 
@@ -151,17 +151,17 @@ def check_go_mate(session: RawSession) -> Outcome:
 
     Spec: "mate <x> ... search for a mate in x moves".
     """
-    board = chess.Board(MATE_IN_ONE_FEN)
+    game = esca.Game.from_fen(MATE_IN_ONE_FEN)
     session.set_position(fen=MATE_IN_ONE_FEN)
     result = session.go("mate 1")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the mate-in-one position")
-    board.push(move)
-    found = board.is_checkmate()
-    board.pop()
+    move = verify_move(game, result.bestmove, "the mate-in-one position")
+    game.play(move)
+    found = game.outcome() == "checkmate"
+    game.undo()
     return Outcome(
         f"mate 1 finished in {result.elapsed:.3f} s, mate found: {found}",
-        details=move_details(board, result, move) | {"found_mate_in_one": found},
+        details=move_details(game, result, move) | {"found_mate_in_one": found},
     )
 
 
@@ -172,12 +172,12 @@ def check_go_movestogo(session: RawSession) -> Outcome:
 
     Spec: "movestogo <x> ... there are x moves to the next time control".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     arguments = "wtime 10000 btime 10000 movestogo 20"
     result = session.go(arguments)
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     if result.elapsed > 10.0:
         raise CheckFailure(
             f"go {arguments} took {result.elapsed:.3f} s, the whole remaining clock",
@@ -185,7 +185,7 @@ def check_go_movestogo(session: RawSession) -> Outcome:
         )
     return Outcome(
         f"bestmove {result.bestmove.move} in {result.elapsed:.3f} s",
-        details=move_details(board, result, move) | {"go": arguments},
+        details=move_details(game, result, move) | {"go": arguments},
     )
 
 
@@ -197,12 +197,12 @@ def check_searchmoves(session: RawSession) -> Outcome:
     Spec: "searchmoves <move1> .... <movei> ... restrict search to this moves only". A standard ``go``
     argument with no way to declare non-support, so ignoring it is a conformance failure, not a skip.
     """
-    board = chess.Board()
+    game = esca.Game()
     allowed = ["a2a3", "h2h3"]
     session.set_position()
     result = session.go(f"movetime 300 searchmoves {' '.join(allowed)}")
     verify_single_bestmove(result)
-    move = verify_move(board, result.bestmove, "the starting position")
+    move = verify_move(game, result.bestmove, "the starting position")
     if result.bestmove.move not in allowed:
         raise CheckFailure(
             f"answered {result.bestmove.move}, outside the searchmoves set {allowed}",
@@ -211,7 +211,7 @@ def check_searchmoves(session: RawSession) -> Outcome:
         )
     return Outcome(
         f"answer {result.bestmove.move} stayed within the {len(allowed)} listed moves",
-        details={"searchmoves": allowed, "bestmove": result.bestmove.move, "bestmove_san": board.san(move)},
+        details={"searchmoves": allowed, "bestmove": result.bestmove.move, "bestmove_san": game.move_to_san(move)},
     )
 
 
@@ -223,7 +223,7 @@ def check_isready_while_searching(session: RawSession) -> Outcome:
     Spec: "this command must always be answered with 'readyok' and can be sent also when the engine is
     calculating in which case the engine should also immediately answer with 'readyok'".
     """
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     session.send_go("infinite")
     session.collect_for(0.2)
@@ -237,7 +237,7 @@ def check_isready_while_searching(session: RawSession) -> Outcome:
     session.stop()
     result = session.collect_search()
     verify_single_bestmove(result)
-    verify_move(board, result.bestmove, "the starting position")
+    verify_move(game, result.bestmove, "the starting position")
     return Outcome(
         f"readyok during the search, then bestmove {result.bestmove.move} after stop",
         details={"lines_before_readyok": len(lines) - 1, "readyok_latency_s": round(latency, 3)},

@@ -11,7 +11,7 @@ The UCI Test Suite is designed to test the correctness of a chess engine's imple
 - Checks the protocol on the wire: the suite spawns the engine and asserts on the exact protocol text
 - Groups the checks by protocol layer, and runs them lowest layer first, each layer on a fresh engine process
 - Skips, rather than fails, a feature the engine does not advertise
-- Drives the engine through `python-chess` as well, as a mainstream UCI client would
+- Drives the engine through `esca` as well, as a mainstream UCI client would
 - Testing continues even if individual checks fail
 
 ## Levels
@@ -24,7 +24,7 @@ The UCI Test Suite is designed to test the correctness of a chess engine's imple
 | L3 | Session | `ucinewgame`, `setoption` on every declared option, `debug`, the `go` limits and `searchmoves`, `isready` while searching, the `info` stream |
 | L4 | Optional | Ponder, MultiPV, `UCI_Chess960`, `UCI_AnalyseMode`, `register`/`copyprotection` — each skipped when not offered |
 | L5 | Robustness | Malformed commands, impossible positions, illegal moves, junk bursts, `quit` mid-search: no crash, no hang, `isready` still answered |
-| L6 | Acceptance | `python-chess` drives the engine end to end |
+| L6 | Acceptance | `esca` drives the engine end to end |
 
 **L0–L2 together are the minimum UCI engine.** An engine that passes them can be played; the levels above add the
 conveniences a GUI expects.

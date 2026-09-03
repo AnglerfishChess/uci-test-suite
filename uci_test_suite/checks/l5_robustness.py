@@ -9,7 +9,7 @@ import time
 from collections.abc import Sequence
 from typing import Any, Final
 
-import chess
+import esca
 
 from uci_test_suite.checks.base import CheckFailure, Outcome
 from uci_test_suite.checks.registry import fresh_check, process_check
@@ -94,13 +94,13 @@ def check_impossible_fen(session: RawSession) -> Outcome:
     for _label, fen in IMPOSSIBLE_FENS:
         _survives(session, [f"position fen {fen}"], settle=0.2)
 
-    board = chess.Board()
+    game = esca.Game()
     session.set_position()
     result = session.go("movetime 200")
-    move = verify_move(board, result.bestmove, "the starting position after the impossible ones")
+    move = verify_move(game, result.bestmove, "the starting position after the impossible ones")
     return Outcome(
         f"{len(IMPOSSIBLE_FENS)} impossible positions survived, then bestmove {result.bestmove.move}",
-        details=move_details(board, result, move) | {"positions": [label for label, _ in IMPOSSIBLE_FENS]},
+        details=move_details(game, result, move) | {"positions": [label for label, _ in IMPOSSIBLE_FENS]},
     )
 
 

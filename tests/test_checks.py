@@ -214,6 +214,29 @@ class TestRobustnessFaults:
         assert verdicts(results)["quit_during_search"] is Status.FAIL
 
 
+class TestAcceptance:
+    @pytest.fixture(scope="class")
+    def results(self) -> list[CheckResult]:
+        return run(levels=[Level.ACCEPTANCE])
+
+    def test_the_client_drives_the_engine_end_to_end(self, results: list[CheckResult]) -> None:
+        assert set(verdicts(results).values()) == {Status.PASS}
+
+    def test_the_engine_identity_is_read(self, results: list[CheckResult]) -> None:
+        assert "Fake Engine 1.0" in message(results, "client_handshake")
+
+
+class TestAcceptanceFaults:
+    def test_missing_author(self) -> None:
+        results = run("--no-author", levels=[Level.ACCEPTANCE])
+        assert verdicts(results)["client_handshake"] is Status.FAIL
+        assert "author" in message(results, "client_handshake")
+
+    def test_illegal_bestmove(self) -> None:
+        results = run("--illegal-move", levels=[Level.ACCEPTANCE], timeout=2.0)
+        assert verdicts(results)["client_play"] is Status.FAIL
+
+
 class TestOptionalFeatures:
     def test_declared_features_are_exercised(self) -> None:
         results = run(levels=[Level.OPTIONAL])

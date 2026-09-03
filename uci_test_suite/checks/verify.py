@@ -3,7 +3,7 @@
 from collections.abc import Callable, Sequence
 from typing import Any, Final
 
-import chess
+import esca
 
 from uci_test_suite.checks.base import CheckFailure
 from uci_test_suite.checks.session import RawSession, SearchResult
@@ -61,22 +61,19 @@ def malformed_lines(lines: Sequence[str]) -> list[str]:
     return broken
 
 
-def verify_move(board: chess.Board, best: BestMove, where: str) -> chess.Move:
+def verify_move(game: esca.Game, best: BestMove, where: str) -> esca.Move:
     """The best move as a move object; fails unless it is a LAN move that is legal in the given position."""
+    fen = game.position.fen
     if best.is_null:
-        raise CheckFailure(f"engine reports no move in {where}", bestmove=best.move, fen=board.fen())
+        raise CheckFailure(f"engine reports no move in {where}", bestmove=best.move, fen=fen)
     if not is_lan_move(best.move):
-        raise CheckFailure(
-            f"best move {best.move!r} is not long algebraic notation", bestmove=best.move, fen=board.fen()
-        )
+        raise CheckFailure(f"best move {best.move!r} is not long algebraic notation", bestmove=best.move, fen=fen)
     try:
-        move = chess.Move.from_uci(best.move)
-    except chess.InvalidMoveError:
-        raise CheckFailure(
-            f"best move {best.move} is illegal in {where}", bestmove=best.move, fen=board.fen()
-        ) from None
-    if move not in board.legal_moves:
-        raise CheckFailure(f"best move {best.move} is illegal in {where}", bestmove=best.move, fen=board.fen())
+        game.play(best.move)
+    except ValueError:
+        raise CheckFailure(f"best move {best.move} is illegal in {where}", bestmove=best.move, fen=fen) from None
+    move = game.moves[-1]
+    game.undo()
     return move
 
 
@@ -94,12 +91,12 @@ def verify_single_bestmove(result: SearchResult) -> None:
         )
 
 
-def move_details(board: chess.Board, result: SearchResult, move: chess.Move) -> dict[str, Any]:
+def move_details(game: esca.Game, result: SearchResult, move: esca.Move) -> dict[str, Any]:
     """The usual per-search details of a check result."""
     return {
-        "fen": board.fen(),
+        "fen": game.position.fen,
         "bestmove": result.bestmove.move,
-        "bestmove_san": board.san(move),
+        "bestmove_san": game.move_to_san(move),
         "ponder": result.bestmove.ponder,
         "elapsed_s": round(result.elapsed, 3),
         "info_lines": len(result.infos),

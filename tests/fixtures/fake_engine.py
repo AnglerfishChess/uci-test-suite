@@ -10,7 +10,7 @@ With no arguments it behaves conformingly; each flag makes it break one rule: ``
 
 import sys
 
-import chess
+import esca
 
 OPTIONS = [
     "option name Hash type spin default 16 min 1 max 1024",
@@ -45,8 +45,17 @@ def emit(text: str) -> None:
     print(text, flush=True)
 
 
+def new_game(chess960: bool) -> esca.Game:
+    """A game on the standard array, in the variant the engine is currently switched into."""
+    variant = esca.CHESS960 if chess960 else esca.CLASSIC
+    game = esca.Game.from_fen(esca.CLASSIC.start_position().fen, variant=variant)
+    game.castling_output = esca.KING_TO_ROOK if chess960 else esca.KING_TWO_SQUARES
+    return game
+
+
 def main(flags: set[str]) -> int:
-    board = chess.Board(chess960=True)
+    chess960 = False
+    game = new_game(chess960)
     multipv = 1
     waiting = False  # a search that must not answer until stop/ponderhit
 
@@ -77,8 +86,10 @@ def main(flags: set[str]) -> int:
         elif word == "setoption":
             if " name MultiPV value " in command:
                 multipv = int(command.rsplit(maxsplit=1)[1])
+            elif " name UCI_Chess960 value " in command:
+                chess960 = command.rsplit(maxsplit=1)[1] == "true"
         elif word == "position":
-            board = parse_position(command, board, flags)
+            game = parse_position(command, game, chess960, flags)
             if "--bestmove-without-go" in flags:
                 emit("bestmove e2e4")
         elif word == "go":
@@ -88,11 +99,11 @@ def main(flags: set[str]) -> int:
                 waiting = True
             else:
                 restricted = () if "--ignore-searchmoves" in flags else searchmoves(command)
-                answer(board, multipv, flags, restricted)
+                answer(game, multipv, flags, restricted)
         elif word in ("stop", "ponderhit"):
             if waiting and "--hang-on-stop" not in flags:
                 waiting = False
-                answer(board, multipv, flags, ())
+                answer(game, multipv, flags, ())
         elif word == "quit":
             if "--zombie-on-quit" in flags:
                 continue
@@ -113,8 +124,8 @@ def searchmoves(command: str) -> tuple[str, ...]:
     return tuple(wanted)
 
 
-def parse_position(command: str, current: chess.Board, flags: set[str]) -> chess.Board:
-    """Rebuild the board from a ``position`` command, keeping the old one when the command makes no sense."""
+def parse_position(command: str, current: esca.Game, chess960: bool, flags: set[str]) -> esca.Game:
+    """Rebuild the game from a ``position`` command, keeping the old one when the command makes no sense."""
     tokens = command.split()
     try:
         moves = tokens[tokens.index("moves") + 1 :] if "moves" in tokens else []
@@ -122,19 +133,21 @@ def parse_position(command: str, current: chess.Board, flags: set[str]) -> chess
             if "--crash-on-fen" in flags:
                 sys.exit(3)
             fen_end = tokens.index("moves") if "moves" in tokens else len(tokens)
-            board = chess.Board(" ".join(tokens[tokens.index("fen") + 1 : fen_end]), chess960=True)
+            fen = " ".join(tokens[tokens.index("fen") + 1 : fen_end])
+            game = esca.Game.from_fen(fen, variant=esca.CHESS960 if chess960 else esca.CLASSIC)
+            game.castling_output = esca.KING_TO_ROOK if chess960 else esca.KING_TWO_SQUARES
         else:
-            board = chess.Board(chess960=True)
+            game = new_game(chess960)
         for move in moves:
-            board.push_uci(move)
+            game.play(move)
     except ValueError:
         return current
-    return board
+    return game
 
 
-def answer(board: chess.Board, multipv: int, flags: set[str], restricted: tuple[str, ...]) -> None:
-    """Report a search and its result."""
-    moves = [move.uci() for move in board.legal_moves]
+def answer(game: esca.Game, multipv: int, flags: set[str], restricted: tuple[str, ...]) -> None:
+    """Report a search and its result. The move answered is the last legal one, not the first."""
+    moves = [game.move_to_uci(move) for move in reversed(game.legal_moves())]
     if restricted:
         moves = [move for move in moves if move in restricted] or moves
     if not moves:
