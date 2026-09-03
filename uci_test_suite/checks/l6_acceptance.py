@@ -1,11 +1,16 @@
 """L6 — a mainstream UCI client, ``esca``, drives the engine end to end."""
 
+from typing import Final
+
 import esca
 from esca.uci import Limits
 
-from uci_test_suite.checks.base import CheckFailure, Outcome
+from uci_test_suite.checks.base import CheckFailure, CheckSkipped, Outcome
 from uci_test_suite.checks.registry import acceptance_check
 from uci_test_suite.checks.session import AcceptanceSession
+
+#: A Chess960 position with the king on f1/f8 and rooks on b/h, where both sides may castle at once.
+CHESS960_FEN: Final[str] = "1r3k1r/pppppppp/8/8/8/8/PPPPPPPP/1R3K1R w KQkq - 0 1"
 
 
 @acceptance_check("client_handshake", budget=25.0)
@@ -64,5 +69,37 @@ def check_client_analyse(session: AcceptanceSession) -> Outcome:
             "pv": [move.uci for move in info.pv],
             "variations": len(reports),
             "note": None if score is not None else "no info score line; the spec does not require one",
+        },
+    )
+
+
+@acceptance_check("client_chess960", budget=25.0)
+def check_client_chess960(session: AcceptanceSession) -> Outcome:
+    """
+    A UCI client plays a Chess960 game through the engine, switching it into the variant itself.
+
+    Spec: "UCI_Chess960 ... the engine supports Chess960 ... the castling move is a king move to the rook".
+    """
+    if "UCI_Chess960" not in session.engine.options:
+        raise CheckSkipped("engine does not declare the UCI_Chess960 option")
+
+    game = esca.Game.from_fen(CHESS960_FEN, variant=esca.CHESS960)
+    game.play("f1h1")
+    answer = session.engine.play(game, Limits(movetime=0.3))
+    if answer.best is None:
+        raise CheckFailure("the client got no move from the engine in a Chess960 position")
+    if answer.best not in game.legal_moves():
+        raise CheckFailure(
+            f"the client got the illegal move {answer.best.uci} in a Chess960 position",
+            bestmove=answer.best.uci,
+            fen=game.position.fen,
+        )
+    return Outcome(
+        f"Chess960 game accepted, answered {game.move_to_san(answer.best)}",
+        details={
+            "fen": game.position.fen,
+            "castling_move": "f1h1",
+            "bestmove": answer.best.uci,
+            "bestmove_san": game.move_to_san(answer.best),
         },
     )

@@ -24,7 +24,7 @@ The UCI Test Suite is designed to test the correctness of a chess engine's imple
 | L3 | Session | `ucinewgame`, `setoption` on every declared option, `debug`, the `go` limits and `searchmoves`, `isready` while searching, the `info` stream |
 | L4 | Optional | Ponder, MultiPV, `UCI_Chess960`, `UCI_AnalyseMode`, `register`/`copyprotection` — each skipped when not offered |
 | L5 | Robustness | Malformed commands, impossible positions, illegal moves, junk bursts, `quit` mid-search: no crash, no hang, `isready` still answered |
-| L6 | Acceptance | `esca` drives the engine end to end |
+| L6 | Acceptance | `esca` drives the engine end to end: handshake, `play`, `analyse`, Chess960 |
 
 **L0–L2 together are the minimum UCI engine.** An engine that passes them can be played; the levels above add the
 conveniences a GUI expects.

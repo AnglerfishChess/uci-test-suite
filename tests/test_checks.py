@@ -225,6 +225,15 @@ class TestAcceptance:
     def test_the_engine_identity_is_read(self, results: list[CheckResult]) -> None:
         assert "Fake Engine 1.0" in message(results, "client_handshake")
 
+    def test_chess960_is_played_in_the_king_takes_rook_spelling(self, results: list[CheckResult]) -> None:
+        details = next(result.details for result in results if result.name == "client_chess960")
+        assert details["castling_move"] == "f1h1"
+        assert details["fen"].startswith("1r3k1r/pppppppp")
+
+    def test_chess960_is_skipped_when_not_offered(self) -> None:
+        results = run("--no-options", levels=[Level.ACCEPTANCE])
+        assert verdicts(results)["client_chess960"] is Status.SKIP
+
 
 class TestAcceptanceFaults:
     def test_missing_author(self) -> None:
