@@ -82,7 +82,8 @@ class TestSession:
 
 class TestConformingEngine:
     @pytest.fixture(scope="class")
-    def results(self) -> list[CheckResult]:
+    @staticmethod
+    def results() -> list[CheckResult]:
         return run()
 
     def test_nothing_fails(self, results: list[CheckResult]) -> None:
@@ -216,7 +217,8 @@ class TestRobustnessFaults:
 
 class TestAcceptance:
     @pytest.fixture(scope="class")
-    def results(self) -> list[CheckResult]:
+    @staticmethod
+    def results() -> list[CheckResult]:
         return run(levels=[Level.ACCEPTANCE])
 
     def test_the_client_drives_the_engine_end_to_end(self, results: list[CheckResult]) -> None:
