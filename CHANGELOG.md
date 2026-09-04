@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-09-04
 
 - The suite reads positions and drives the acceptance level with `esca`.
   L6 now also plays a Chess960 game through the client, in both castling
