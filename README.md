@@ -1,5 +1,11 @@
 # UCI Test Suite
 
+[![PyPI](https://img.shields.io/pypi/v/uci-test-suite)](https://pypi.org/project/uci-test-suite/)
+[![Python](https://img.shields.io/pypi/pyversions/uci-test-suite)](https://pypi.org/project/uci-test-suite/)
+[![CI](https://github.com/AnglerfishChess/uci-test-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/AnglerfishChess/uci-test-suite/actions/workflows/ci.yml)
+[![Publish](https://github.com/AnglerfishChess/uci-test-suite/actions/workflows/publish.yml/badge.svg)](https://github.com/AnglerfishChess/uci-test-suite/actions/workflows/publish.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A Python-based set of tests for UCI server/chess engine implementations (such as Stockfish).
 
 ## Overview
